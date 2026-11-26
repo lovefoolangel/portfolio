@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title></title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      min-height: 100dvh;
+      overflow: hidden;
+      background: #000000;
+      touch-action: manipulation;
+    }
+
+    video {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      object-fit: cover;
+      background: #000000;
+    }
+  </style>
+</head>
+<body>
+  <video
+    id="vid"
+    src="./jumpscare.mp4"
+    autoplay
+    playsinline
+    webkit-playsinline
+    loop
+    preload="auto"
+  ></video>
+
+  <script>
+    const BOOST_LEVEL = 5.0; // 1.0 = normal 100%, 5.0 = 500% loudness
+
+    const vid = document.getElementById("vid");
+    vid.loop = true;
+
+    let audioCtx = null;
+    let gainNode = null;
+
+    function initAudioBoost() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        const source = audioCtx.createMediaElementSource(vid);
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = BOOST_LEVEL;
+
+        source.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
+    }
+
+    function startUnmuted() {
+      vid.loop = true;
+      vid.muted = false;
+      vid.volume = 1.0;
+      initAudioBoost();
+      return vid.play();
+    }
+
+    function autoStart() {
+      startUnmuted().catch(() => {
+        // Fallback so video still autoplays immediately even when browser blocks sound on load
+        vid.muted = true;
+        vid.play().catch(() => {});
+      });
+    }
+
+    function unlockSoundAndFullscreen() {
+      startUnmuted().catch(() => {});
+
+      const el = document.documentElement;
+      if (el.requestFullscreen) {
+        el.requestFullscreen().catch(() => {});
+      } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+      }
+    }
+
+    vid.addEventListener("ended", () => {
+      vid.currentTime = 0;
+      vid.play().catch(() => {});
+    });
+
+    window.addEventListener("DOMContentLoaded", autoStart);
+    window.addEventListener("load", autoStart);
+
+    ["pointerdown", "touchstart", "click", "keydown"].forEach((eventName) => {
+      document.addEventListener(eventName, unlockSoundAndFullscreen, { passive: true });
+    });
+  </script>
+</body>
+</html>
